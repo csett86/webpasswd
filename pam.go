@@ -27,7 +27,7 @@ var changePasswordFunc = ChangePassword
 // able to authenticate and update the shadow database.
 func ChangePassword(username, currentPassword, newPassword string) error {
 	fallbackStep := 0
-	fallbackResponses := []string{currentPassword, currentPassword, newPassword, newPassword}
+	fallbackResponses := []string{currentPassword, newPassword, newPassword}
 	consumePrompt := func() {
 		if fallbackStep < len(fallbackResponses) {
 			fallbackStep++
@@ -62,12 +62,8 @@ func ChangePassword(username, currentPassword, newPassword string) error {
 		return fmt.Errorf("%w: %w", ErrPAMUnknown, err)
 	}
 
-	// Authenticate with the current password.
-	if err := t.Authenticate(0); err != nil {
-		return classifyPAMError(err, ErrAuthFailed)
-	}
-
-	// Request the password change.
+	// Request the password change. The passwd PAM service prompts for the
+	// current password when required and then asks for the new password.
 	if err := t.ChangeAuthTok(0); err != nil {
 		return classifyPAMError(err, ErrPermDenied)
 	}
