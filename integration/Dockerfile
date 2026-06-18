@@ -45,6 +45,10 @@ RUN rm -f \
 # test passwords can be kept simple and deterministic.
 RUN printf 'password\trequired\tpam_unix.so\n' > /etc/pam.d/common-password
 
+# Create the integration-test user before systemd starts the service so the
+# service's filesystem view includes the account database entry.
+RUN useradd -m webtest && echo 'webtest:OldPass1234' | chpasswd
+
 # Install the webpasswd binary.
 COPY --from=builder /webpasswd /usr/local/bin/webpasswd
 

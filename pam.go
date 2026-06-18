@@ -26,29 +26,15 @@ var changePasswordFunc = ChangePassword
 // The process must have sufficient privilege (typically root) for PAM to be
 // able to authenticate and update the shadow database.
 func ChangePassword(username, currentPassword, newPassword string) error {
-	fallbackStep := 0
-	fallbackResponses := []string{currentPassword, newPassword, newPassword}
-	consumePrompt := func() {
-		if fallbackStep < len(fallbackResponses) {
-			fallbackStep++
-		}
-	}
+	step := 0
+	responses := []string{currentPassword, newPassword, newPassword}
 
 	t, err := pam.StartFunc("passwd", username, func(s pam.Style, msg string) (string, error) {
 		switch s {
 		case pam.PromptEchoOff, pam.PromptEchoOn:
-			lowerMsg := strings.ToLower(msg)
-			switch {
-			case strings.Contains(lowerMsg, "current"), strings.Contains(lowerMsg, "old"):
-				consumePrompt()
-				return currentPassword, nil
-			case strings.Contains(lowerMsg, "new"), strings.Contains(lowerMsg, "retype"), strings.Contains(lowerMsg, "again"):
-				consumePrompt()
-				return newPassword, nil
-			}
-			if fallbackStep < len(fallbackResponses) {
-				resp := fallbackResponses[fallbackStep]
-				fallbackStep++
+			if step < len(responses) {
+				resp := responses[step]
+				step++
 				return resp, nil
 			}
 			return "", fmt.Errorf("unexpected PAM prompt: %q", msg)
@@ -62,8 +48,12 @@ func ChangePassword(username, currentPassword, newPassword string) error {
 		return fmt.Errorf("%w: %w", ErrPAMUnknown, err)
 	}
 
-	// Request the password change. The passwd PAM service prompts for the
-	// current password when required and then asks for the new password.
+	// Authenticate with the current password.
+	if err := t.Authenticate(0); err != nil {
+		return classifyPAMError(err, ErrAuthFailed)
+	}
+
+	// Request the password change.
 	if err := t.ChangeAuthTok(0); err != nil {
 		return classifyPAMError(err, ErrPermDenied)
 	}
