@@ -36,9 +36,9 @@ const (
 	// Test user credentials.  Passwords are kept simple because the
 	// Dockerfile installs a minimal PAM stack without complexity checking.
 	testUser    = "webtest"
-	initialPass = "OldPass1234"
-	newPass     = "NewPass5678"
-	finalPass   = "FinalPass90"
+	initialPass = "S7a!kR9#pL2@mQ5$"
+	newPass     = "V3!nT8@zH6#rC4%w"
+	finalPass   = "J9&xM2!qP7@dK5^s"
 )
 
 // TestPasswordChangeRequiresCorrectCurrentPassword exercises the live
