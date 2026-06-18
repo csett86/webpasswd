@@ -1,0 +1,42 @@
+[Unit]
+Description=webpasswd — web-based password changer
+Documentation=https://github.com/csett86/webpasswd
+After=network.target
+
+[Service]
+Type=simple
+
+# webpasswd must be able to call PAM and write to /etc/shadow.
+# Running as root is the simplest option; alternatively grant the
+# CAP_SETUID and CAP_SETGID capabilities to a dedicated service account.
+User=root
+Group=root
+
+# Path to the binary.
+ExecStart=/usr/local/bin/webpasswd \
+    -addr :8080 \
+    -rate-limit 5 \
+    -rate-window 15m \
+    -x-forwarded-for true
+
+# Working directory must contain templates/ and static/ subdirectories
+# (or adjust the binary to accept explicit paths).
+WorkingDirectory=/etc/webpasswd
+
+Restart=on-failure
+RestartSec=5
+
+# Harden the service where PAM restrictions allow.
+NoNewPrivileges=false
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/etc/shadow /var/log
+PrivateTmp=true
+
+# Log to the journal.
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=webpasswd
+
+[Install]
+WantedBy=multi-user.target
