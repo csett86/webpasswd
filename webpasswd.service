@@ -12,23 +12,8 @@ Type=simple
 User=root
 Group=root
 
-# Minimal Linux capabilities required for PAM to authenticate users and update
-# /etc/shadow directly:
-#
-#   CAP_DAC_READ_SEARCH  — open /etc/shadow for reading (bypasses DAC read check)
-#   CAP_DAC_OVERRIDE     — open /etc/shadow for writing and create the PAM lock
-#                          file /etc/.pwd.lock in the root-owned /etc/ directory
-#   CAP_AUDIT_WRITE      — record password-change events in the kernel audit log
-#
-# All other root capabilities (CAP_SYS_ADMIN, CAP_NET_ADMIN, CAP_SYS_PTRACE,
-# CAP_SETUID, CAP_SETGID, …) are stripped by the bounding set below.
-AmbientCapabilities=CAP_DAC_READ_SEARCH CAP_DAC_OVERRIDE CAP_AUDIT_WRITE
-CapabilityBoundingSet=CAP_DAC_READ_SEARCH CAP_DAC_OVERRIDE CAP_AUDIT_WRITE
-
-# Prevent the process from gaining additional privileges via setuid/setgid
-# binaries. Safe because pam_unix uses the direct code path (UID=0), so the
-# setuid helper binaries are never invoked.
-NoNewPrivileges=true
+# Keep the default root capability set so PAM/password tooling can perform all
+# filesystem and account-database operations required by local password updates.
 
 # Path to the binary.
 ExecStart=/usr/local/bin/webpasswd \
