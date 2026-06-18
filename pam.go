@@ -5,7 +5,7 @@ import (
 "fmt"
 "strings"
 
-"github.com/msteinert/pam"
+"github.com/msteinert/pam/v2"
 )
 
 // Sentinel errors returned by ChangePassword.
