@@ -44,11 +44,11 @@ WorkingDirectory=/etc/webpasswd
 Restart=on-failure
 RestartSec=5
 
-# Lock down the filesystem; only the shadow file and its PAM lock/backup need
-# to be writable at runtime.
+# Lock down the filesystem while allowing PAM to update account databases in
+# /etc (shadow lock/temp/backup files are created dynamically during updates).
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/etc/shadow /etc/shadow- /etc/.pwd.lock
+ReadWritePaths=/etc
 PrivateTmp=true
 
 # Log to the journal.

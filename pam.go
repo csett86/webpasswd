@@ -19,25 +19,32 @@ var (
 // password. It defaults to ChangePassword but can be replaced in tests.
 var changePasswordFunc = ChangePassword
 
-// ChangePassword authenticates username with currentPassword via PAM and then
-// changes the password to newPassword. It opens a PAM transaction against the
-// "passwd" service so that /etc/pam.d/passwd policy is enforced.
+// ChangePassword changes username's password from currentPassword to
+// newPassword via PAM. It opens a PAM transaction against the "passwd" service
+// so that /etc/pam.d/passwd policy is enforced.
 //
 // The process must have sufficient privilege (typically root) for PAM to be
 // able to authenticate and update the shadow database.
 func ChangePassword(username, currentPassword, newPassword string) error {
-	step := 0
-	responses := []string{currentPassword, newPassword, newPassword}
+	seenPrompt := false
 
 	t, err := pam.StartFunc("passwd", username, func(s pam.Style, msg string) (string, error) {
 		switch s {
 		case pam.PromptEchoOff, pam.PromptEchoOn:
-			if step < len(responses) {
-				resp := responses[step]
-				step++
-				return resp, nil
+			lowerMsg := strings.ToLower(msg)
+			// The very first password prompt is always the current password
+			// (either during Authenticate or ChangeAuthTok, depending on PAM stack).
+			if !seenPrompt {
+				seenPrompt = true
+				return currentPassword, nil
 			}
-			return "", fmt.Errorf("unexpected PAM prompt: %q", msg)
+			// Prompts that explicitly ask for the current/old password must use
+			// the existing credential even after the first prompt.
+			if strings.Contains(lowerMsg, "current") || strings.Contains(lowerMsg, "old") {
+				return currentPassword, nil
+			}
+			// Remaining prompts are for entering/retyping the new password.
+			return newPassword, nil
 		case pam.ErrorMsg, pam.TextInfo:
 			return "", nil
 		default:

@@ -49,7 +49,7 @@ const (
 //  4. After the change, the new password is accepted for a further change.
 func TestPasswordChangeRequiresCorrectCurrentPassword(t *testing.T) {
 	if _, err := exec.LookPath("docker"); err != nil {
-		t.Skip("docker not found in PATH – skipping integration test")
+		t.Fatalf("docker not found in PATH: %v", err)
 	}
 
 	// ----------------------------------------------------------------
@@ -125,30 +125,20 @@ func TestPasswordChangeRequiresCorrectCurrentPassword(t *testing.T) {
 		}
 	})
 
-	changeSucceeded := false
-
 	// ----------------------------------------------------------------
 	// Test 2 – correct current password must succeed.
 	// ----------------------------------------------------------------
 	t.Run("CorrectCurrentPassword", func(t *testing.T) {
 		body := postChange(t, baseURL, testUser, initialPass, newPass)
-		if strings.Contains(body, "not allowed") {
-			t.Skip("environment disallows password updates under current PAM/systemd constraints")
-		}
 		if !strings.Contains(body, "successfully") {
 			t.Errorf("expected 'successfully' in response; got:\n%s", body)
-			return
 		}
-		changeSucceeded = true
 	})
 
 	// ----------------------------------------------------------------
 	// Test 3 – old password is rejected after the change.
 	// ----------------------------------------------------------------
 	t.Run("OldPasswordRejectedAfterChange", func(t *testing.T) {
-		if !changeSucceeded {
-			t.Skip("skipping because password update did not succeed in this environment")
-		}
 		body := postChange(t, baseURL, testUser, initialPass, finalPass)
 		if !strings.Contains(body, "incorrect") {
 			t.Errorf("expected 'incorrect' after supplying the old password; got:\n%s", body)
@@ -159,9 +149,6 @@ func TestPasswordChangeRequiresCorrectCurrentPassword(t *testing.T) {
 	// Test 4 – new password is accepted after the change.
 	// ----------------------------------------------------------------
 	t.Run("NewPasswordAcceptedAfterChange", func(t *testing.T) {
-		if !changeSucceeded {
-			t.Skip("skipping because password update did not succeed in this environment")
-		}
 		body := postChange(t, baseURL, testUser, newPass, finalPass)
 		if !strings.Contains(body, "successfully") {
 			t.Errorf("expected 'successfully' when supplying the new password; got:\n%s", body)
