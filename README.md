@@ -27,7 +27,7 @@ go build -o webpasswd .
 
 ```sh
 # Must run as root so pam_unix uses its direct shadow-file code path.
-# Use the provided systemd unit for capability-restricted production deployments.
+# Use the provided systemd unit for production deployments.
 sudo ./webpasswd -addr :8080
 ```
 
@@ -70,11 +70,7 @@ location / {
 ## Security notes
 
 - The process runs as **root** (UID 0) because `pam_unix` only uses its direct
-  shadow-file code path when the caller is root. The systemd unit mitigates this
-  by restricting the Linux capability bounding set to the three capabilities PAM
-  actually needs (`CAP_DAC_READ_SEARCH`, `CAP_DAC_OVERRIDE`, `CAP_AUDIT_WRITE`)
-  and enabling `NoNewPrivileges=true`, preventing the process from ever acquiring
-  capabilities outside that set.
+  shadow-file code path when the caller is root. If you are not comfortable with this, dont use this software.
 - Rate limiting is per-IP and in-memory; it resets on restart.
 - Passwords are never logged.
 - `html/template` is used to auto-escape all output (XSS protection).
@@ -85,5 +81,4 @@ location / {
 go test ./...
 ```
 
-Integration testing against real PAM requires a system with a known user
-account and shadow entry, plus Docker.
+Integration testing against real PAM is done in Docker.
