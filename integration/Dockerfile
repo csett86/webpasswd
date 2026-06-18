@@ -2,7 +2,7 @@
 # Stage 1 – build the webpasswd binary inside a Go toolchain image so
 # that the correct glibc version and CGO PAM bindings are guaranteed.
 # -----------------------------------------------------------------------
-FROM golang:1.24-bookworm AS builder
+FROM golang:1.25-bookworm AS builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         libpam0g-dev \
