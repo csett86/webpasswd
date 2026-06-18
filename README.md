@@ -86,4 +86,4 @@ go test ./...
 ```
 
 Integration testing against real PAM requires a system with a known user
-account and shadow entry.
+account and shadow entry, plus Docker.

@@ -1,5 +1,3 @@
-//go:build integration
-
 // Package integration provides an end-to-end test that:
 //   - builds a Docker image containing the webpasswd binary and the
 //     provided systemd unit (webpasswd.service),
@@ -11,7 +9,7 @@
 //
 // Run with:
 //
-//	go test -v -tags integration -timeout 5m ./integration/
+//	go test -v -timeout 5m ./integration/
 package integration_test
 
 import (
