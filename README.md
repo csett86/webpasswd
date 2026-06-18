@@ -26,7 +26,8 @@ go build -o webpasswd .
 ## Run
 
 ```sh
-# Must run as root (or with sufficient PAM privileges) to read/write /etc/shadow
+# Must run as root so pam_unix uses its direct shadow-file code path.
+# Use the provided systemd unit for capability-restricted production deployments.
 sudo ./webpasswd -addr :8080
 ```
 
@@ -68,8 +69,12 @@ location / {
 
 ## Security notes
 
-- The process **must run as root** (or have `CAP_SETUID`/`CAP_SETGID`) so PAM
-  can authenticate users and update `/etc/shadow`.
+- The process runs as **root** (UID 0) because `pam_unix` only uses its direct
+  shadow-file code path when the caller is root. The systemd unit mitigates this
+  by restricting the Linux capability bounding set to the three capabilities PAM
+  actually needs (`CAP_DAC_READ_SEARCH`, `CAP_DAC_OVERRIDE`, `CAP_AUDIT_WRITE`)
+  and enabling `NoNewPrivileges=true`, preventing the process from ever acquiring
+  capabilities outside that set.
 - Rate limiting is per-IP and in-memory; it resets on restart.
 - Passwords are never logged.
 - `html/template` is used to auto-escape all output (XSS protection).

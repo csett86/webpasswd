@@ -6,11 +6,29 @@ After=network.target
 [Service]
 Type=simple
 
-# webpasswd must be able to call PAM and write to /etc/shadow.
-# Running as root is the simplest option; alternatively grant the
-# CAP_SETUID and CAP_SETGID capabilities to a dedicated service account.
+# pam_unix operates in direct mode (no setuid helpers) only when UID=0.
+# unix_update, the PAM helper for writing /etc/shadow, carries no setuid bit
+# and therefore also requires root-level file access from its caller.
 User=root
 Group=root
+
+# Minimal Linux capabilities required for PAM to authenticate users and update
+# /etc/shadow directly:
+#
+#   CAP_DAC_READ_SEARCH  — open /etc/shadow for reading (bypasses DAC read check)
+#   CAP_DAC_OVERRIDE     — open /etc/shadow for writing and create the PAM lock
+#                          file /etc/.pwd.lock in the root-owned /etc/ directory
+#   CAP_AUDIT_WRITE      — record password-change events in the kernel audit log
+#
+# All other root capabilities (CAP_SYS_ADMIN, CAP_NET_ADMIN, CAP_SYS_PTRACE,
+# CAP_SETUID, CAP_SETGID, …) are stripped by the bounding set below.
+AmbientCapabilities=CAP_DAC_READ_SEARCH CAP_DAC_OVERRIDE CAP_AUDIT_WRITE
+CapabilityBoundingSet=CAP_DAC_READ_SEARCH CAP_DAC_OVERRIDE CAP_AUDIT_WRITE
+
+# Prevent the process from gaining additional privileges via setuid/setgid
+# binaries. Safe because pam_unix uses the direct code path (UID=0), so the
+# setuid helper binaries are never invoked.
+NoNewPrivileges=true
 
 # Path to the binary.
 ExecStart=/usr/local/bin/webpasswd \
@@ -26,11 +44,11 @@ WorkingDirectory=/etc/webpasswd
 Restart=on-failure
 RestartSec=5
 
-# Harden the service where PAM restrictions allow.
-NoNewPrivileges=false
+# Lock down the filesystem; only the shadow file and its PAM lock/backup need
+# to be writable at runtime.
 ProtectSystem=strict
-ProtectHome=read-only
-ReadWritePaths=/etc/shadow /var/log
+ProtectHome=true
+ReadWritePaths=/etc/shadow /etc/shadow- /etc/.pwd.lock
 PrivateTmp=true
 
 # Log to the journal.
