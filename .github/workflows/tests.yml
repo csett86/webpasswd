@@ -12,16 +12,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
 
       - name: Install PAM headers
-        run: sudo apt-get update && sudo apt-get install -y libpam0g-dev
+        run: sudo apt update && sudo apt install -y libpam0g-dev
 
       - name: Run unit tests
         run: go test ./...
