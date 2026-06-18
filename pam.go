@@ -28,6 +28,11 @@ var changePasswordFunc = ChangePassword
 func ChangePassword(username, currentPassword, newPassword string) error {
 	fallbackStep := 0
 	fallbackResponses := []string{currentPassword, currentPassword, newPassword, newPassword}
+	consumePrompt := func() {
+		if fallbackStep < len(fallbackResponses) {
+			fallbackStep++
+		}
+	}
 
 	t, err := pam.StartFunc("passwd", username, func(s pam.Style, msg string) (string, error) {
 		switch s {
@@ -35,8 +40,10 @@ func ChangePassword(username, currentPassword, newPassword string) error {
 			lowerMsg := strings.ToLower(msg)
 			switch {
 			case strings.Contains(lowerMsg, "current"), strings.Contains(lowerMsg, "old"):
+				consumePrompt()
 				return currentPassword, nil
 			case strings.Contains(lowerMsg, "new"), strings.Contains(lowerMsg, "retype"), strings.Contains(lowerMsg, "again"):
+				consumePrompt()
 				return newPassword, nil
 			}
 			if fallbackStep < len(fallbackResponses) {
