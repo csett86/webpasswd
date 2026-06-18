@@ -39,16 +39,6 @@ sudo ./webpasswd -addr :8080
 | `-rate-window` | `15m` | Sliding window duration for rate limiting |
 | `-x-forwarded-for` | `false` | Trust `X-Forwarded-For` / `X-Real-IP` headers (enable when behind a reverse proxy) |
 
-## Docker
-
-```sh
-docker build -t webpasswd .
-docker run --rm -it \
-  --cap-add=SETUID --cap-add=SETGID \
-  -p 8080:8080 \
-  webpasswd
-```
-
 ## systemd
 
 Install the unit file and web assets:
@@ -90,5 +80,5 @@ location / {
 go test ./...
 ```
 
-Integration testing against real PAM requires a container with a known user
-account and shadow entry. See the `Dockerfile` for the build environment.
+Integration testing against real PAM requires a system with a known user
+account and shadow entry.
