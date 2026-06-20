@@ -1,7 +1,7 @@
 # webpasswd
 A simple web app to change your own local password, just like passwd on the cli
 
-This is a rough draft, implemented by @copilot
+> **⚠️ WARNING:** This is a rough draft, implemented by @copilot
 
 ## Features
 
