@@ -26,9 +26,13 @@ var changePasswordFunc = ChangePassword
 // The process must have sufficient privilege (typically root) for PAM to be
 // able to authenticate and update the shadow database.
 func ChangePassword(username, currentPassword, newPassword string) error {
-	authTx, err := pam.StartFunc("passwd", username, func(s pam.Style, _ string) (string, error) {
+	authTx, err := pam.StartFunc("passwd", username, func(s pam.Style, msg string) (string, error) {
 		switch s {
 		case pam.PromptEchoOff, pam.PromptEchoOn:
+			lowerMsg := strings.ToLower(msg)
+			if strings.Contains(lowerMsg, "new") {
+				return newPassword, nil
+			}
 			return currentPassword, nil
 		case pam.ErrorMsg, pam.TextInfo:
 			return "", nil
@@ -47,28 +51,8 @@ func ChangePassword(username, currentPassword, newPassword string) error {
 		return classifyPAMError(err, ErrAuthFailed)
 	}
 
-	changeTx, err := pam.StartFunc("passwd", username, func(s pam.Style, msg string) (string, error) {
-		switch s {
-		case pam.PromptEchoOff, pam.PromptEchoOn:
-			lowerMsg := strings.ToLower(msg)
-			if strings.Contains(lowerMsg, "new") {
-				return newPassword, nil
-			}
-			return currentPassword, nil
-		case pam.ErrorMsg, pam.TextInfo:
-			return "", nil
-		default:
-			return "", fmt.Errorf("unhandled PAM message style %d", s)
-		}
-	})
-	if err != nil {
-		return fmt.Errorf("%w: %w", ErrPAMUnknown, err)
-	}
-
-	defer changeTx.End()
-
 	// Request the password change.
-	if err := changeTx.ChangeAuthTok(0); err != nil {
+	if err := authTx.ChangeAuthTok(0); err != nil {
 		return classifyPAMError(err, ErrPermDenied)
 	}
 
