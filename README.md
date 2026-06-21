@@ -21,7 +21,7 @@ A simple web app to change your own local password, just like passwd on the cli
 ## Build
 
 ```sh
-sudo apt-get install libpam0g-dev   # Debian/Ubuntu
+sudo apt install libpam0g-dev   # Debian/Ubuntu
 go build -o webpasswd .
 ```
 
