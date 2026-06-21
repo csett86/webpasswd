@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/msteinert/pam/v2"
@@ -21,20 +22,22 @@ var changePasswordFunc = ChangePassword
 
 // ChangePassword authenticates username with currentPassword via PAM and then
 // changes the password to newPassword. It opens a PAM transaction against the
-// "passwd" service so that /etc/pam.d/passwd policy is enforced.
+// "webpasswd" service so that /etc/pam.d/webpasswd policy is enforced.
 //
 // The process must have sufficient privilege (typically root) for PAM to be
 // able to authenticate and update the shadow database.
 func ChangePassword(username, currentPassword, newPassword string) error {
-	authTx, err := pam.StartFunc("passwd", username, func(s pam.Style, msg string) (string, error) {
+	authTx, err := pam.StartFunc("webpasswd", username, func(s pam.Style, msg string) (string, error) {
 		switch s {
 		case pam.PromptEchoOff, pam.PromptEchoOn:
+			log.Printf("pam prompt username=%s style=%s msg=%q", username, pamStyleName(s), msg)
 			lowerMsg := strings.ToLower(msg)
 			if strings.Contains(lowerMsg, "new") {
 				return newPassword, nil
 			}
 			return currentPassword, nil
 		case pam.ErrorMsg, pam.TextInfo:
+			log.Printf("pam message username=%s style=%s msg=%q", username, pamStyleName(s), msg)
 			return "", nil
 		default:
 			return "", fmt.Errorf("unhandled PAM message style %d", s)
@@ -57,6 +60,21 @@ func ChangePassword(username, currentPassword, newPassword string) error {
 	}
 
 	return nil
+}
+
+func pamStyleName(s pam.Style) string {
+	switch s {
+	case pam.PromptEchoOff:
+		return "prompt_echo_off"
+	case pam.PromptEchoOn:
+		return "prompt_echo_on"
+	case pam.ErrorMsg:
+		return "error_msg"
+	case pam.TextInfo:
+		return "text_info"
+	default:
+		return fmt.Sprintf("unknown_%d", s)
+	}
 }
 
 // classifyPAMError maps a raw PAM error to one of our sentinel errors.

@@ -30,12 +30,10 @@ const (
 	// the systemd unit).  Using a high port reduces the chance of conflicts.
 	hostPort = "18080"
 
-	// Test user credentials.  Passwords are kept simple because the
-	// Dockerfile installs a minimal PAM stack without complexity checking.
 	testUser    = "webtest"
-	initialPass = "OldPass1234"
-	newPass     = "NewPass5678"
-	finalPass   = "FinalPass90"
+	initialPass = "OldPass1234!"
+	newPass     = "NewPass5678!"
+	finalPass   = "FinalPass901!"
 )
 
 // TestPasswordChangeRequiresCorrectCurrentPassword exercises the live
@@ -83,6 +81,11 @@ func TestPasswordChangeRequiresCorrectCurrentPassword(t *testing.T) {
 		"-p", hostPort+":8080",
 		imageName,
 	)
+	t.Cleanup(func() {
+		if t.Failed() {
+			t.Logf("webpasswd journal:\n%s", webpasswdJournal())
+		}
+	})
 
 	// ----------------------------------------------------------------
 	// Give systemd a moment to initialise before exec-ing into the
@@ -124,7 +127,17 @@ func TestPasswordChangeRequiresCorrectCurrentPassword(t *testing.T) {
 	})
 
 	// ----------------------------------------------------------------
-	// Test 2 – correct current password must succeed.
+	// Test 2 – a weak new password must be rejected by pam_pwquality.
+	// ----------------------------------------------------------------
+	t.Run("WeakNewPasswordRejected", func(t *testing.T) {
+		body := postChange(t, baseURL, testUser, initialPass, "weak")
+		if !strings.Contains(body, "not allowed") {
+			t.Errorf("expected 'not allowed' in response; got:\n%s", body)
+		}
+	})
+
+	// ----------------------------------------------------------------
+	// Test 3 – correct current password must succeed.
 	// ----------------------------------------------------------------
 	t.Run("CorrectCurrentPassword", func(t *testing.T) {
 		body := postChange(t, baseURL, testUser, initialPass, newPass)
@@ -134,7 +147,7 @@ func TestPasswordChangeRequiresCorrectCurrentPassword(t *testing.T) {
 	})
 
 	// ----------------------------------------------------------------
-	// Test 3 – old password is rejected after the change.
+	// Test 4 – old password is rejected after the change.
 	// ----------------------------------------------------------------
 	t.Run("OldPasswordRejectedAfterChange", func(t *testing.T) {
 		body := postChange(t, baseURL, testUser, initialPass, finalPass)
@@ -144,7 +157,7 @@ func TestPasswordChangeRequiresCorrectCurrentPassword(t *testing.T) {
 	})
 
 	// ----------------------------------------------------------------
-	// Test 4 – new password is accepted after the change.
+	// Test 5 – new password is accepted after the change.
 	// ----------------------------------------------------------------
 	t.Run("NewPasswordAcceptedAfterChange", func(t *testing.T) {
 		body := postChange(t, baseURL, testUser, newPass, finalPass)
@@ -184,4 +197,13 @@ func mustRun(t *testing.T, name string, args ...string) {
 	if err != nil {
 		t.Fatalf("command %v failed: %v\n%s", append([]string{name}, args...), err, out)
 	}
+}
+
+func webpasswdJournal() string {
+	out, err := exec.Command("docker", "exec", containerName,
+		"journalctl", "-u", "webpasswd", "--no-pager", "-o", "cat").CombinedOutput()
+	if err != nil {
+		return string(out) + "\nfailed to read webpasswd journal: " + err.Error()
+	}
+	return string(out)
 }
