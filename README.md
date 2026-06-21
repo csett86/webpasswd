@@ -10,7 +10,7 @@ A simple web app to change your own local password, just like passwd on the cli
 - Authentication and password change enforced by PAM (`/etc/pam.d/webpasswd`)
 - Per-IP rate limiting (configurable, default: 5 attempts / 15 minutes)
 - No JavaScript — pure HTML + CSS
-- Single Go binary with embedded templates and static files (CGO required for libpam)
+- Single Go binary with an embedded template (CGO required for libpam)
 - Security headers: CSP, X-Frame-Options, X-Content-Type-Options
 
 ## Requirements
@@ -156,8 +156,7 @@ Apache PAM Basic Auth with `pam_unix.so`; use only the app's own PAM
 authentication or an Apache authentication backend such as SSSD/LDAP instead.
 
 webpasswd currently expects to be served at `/`; do not place it under a
-subpath such as `/passwd/` unless you also adjust the application routes and
-static asset paths.
+subpath such as `/passwd/` unless you also adjust the application routes.
 
 ## Security notes
 
