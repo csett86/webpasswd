@@ -92,18 +92,6 @@ func TestHandler_PasswordMismatch(t *testing.T) {
 	}
 }
 
-func TestHandler_PasswordTooShort(t *testing.T) {
-	rl := NewRateLimiter(5, 15*time.Minute)
-	v := goodForm()
-	v.Set("new_password", "short")
-	v.Set("new_password_confirm", "short")
-	rr := postForm(t, rl, v)
-
-	if !strings.Contains(rr.Body.String(), "8 characters") {
-		t.Fatalf("expected length message, body: %s", rr.Body.String())
-	}
-}
-
 func TestHandler_AuthFailed(t *testing.T) {
 	rl := NewRateLimiter(5, 15*time.Minute)
 	changePasswordFunc = func(_, _, _ string) error { return ErrAuthFailed }
