@@ -1,12 +1,13 @@
 # webpasswd
 A simple web app to change your own local password, just like passwd on the cli
 
-> **⚠️ WARNING:** This is a rough draft, implemented by @copilot
+> **⚠️ WARNING:** This is a rough draft, implemented heavily by @copilot and @codex
 
 ## Features
 
 - Change a local Unix user password through a browser form
-- Authentication and password change enforced by PAM (`/etc/pam.d/passwd`)
+- It assumes that PAM presents a simple "current password", "new password", "repeat new password" prompt and does not support any more complex PAM setups.
+- Authentication and password change enforced by PAM (`/etc/pam.d/webpasswd`)
 - Per-IP rate limiting (configurable, default: 5 attempts / 15 minutes)
 - No JavaScript — pure HTML + CSS
 - Single Go binary with embedded templates and static files (CGO required for libpam)
@@ -15,6 +16,7 @@ A simple web app to change your own local password, just like passwd on the cli
 ## Requirements
 
 - Linux with PAM (`libpam0g`)
+- Runtime: `libpam-pwquality`
 - Build: `libpam0g-dev`
 - Go 1.22+
 
@@ -26,6 +28,15 @@ go build -o webpasswd .
 ```
 
 ## Run
+
+webpasswd requires its own pam policy to enforce password complexity rules, as
+its running as root and otherwise no complexity is enforced.
+Install the PAM service policy before starting webpasswd:
+
+```sh
+sudo apt install libpam-pwquality   # Debian/Ubuntu
+sudo cp pam.d/webpasswd /etc/pam.d/webpasswd
+```
 
 ```sh
 # Must run as root so pam_unix uses its direct shadow-file code path.
@@ -48,6 +59,7 @@ Install the binary and unit file:
 
 ```sh
 sudo cp webpasswd /usr/local/bin/
+sudo cp pam.d/webpasswd /etc/pam.d/webpasswd
 sudo cp webpasswd.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now webpasswd
@@ -84,12 +96,8 @@ Restarting Apache is required so its worker processes pick up the new group
 membership. Without this step, Basic Auth can keep returning `401 Unauthorized`
 even when the user entered the correct password.
 
-Create a PAM service for Apache to use, for example `/etc/pam.d/webpasswd`:
-
-```pam
-auth required pam_unix.so
-account required pam_unix.so
-```
+The shipped `pam.d/webpasswd` file is also suitable for Apache's
+`AuthPAMService webpasswd` setting.
 
 Run webpasswd on a local-only address and trust the proxy headers. If you use
 the provided systemd unit, change `ExecStart` to listen on `127.0.0.1:8080`:

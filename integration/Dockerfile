@@ -18,7 +18,7 @@ RUN CGO_ENABLED=1 go build -o /webpasswd .
 # Stage 2 – minimal Debian image with systemd so the binary can be run
 # under the provided webpasswd.service unit exactly as in production.
 # -----------------------------------------------------------------------
-FROM debian:bookworm-slim
+FROM debian:trixie
 
 ENV container=docker \
     DEBIAN_FRONTEND=noninteractive
@@ -27,6 +27,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         systemd \
         systemd-sysv \
         libpam0g \
+        libpam-pwquality \
+        cracklib-runtime \
         passwd \
     && rm -rf /var/lib/apt/lists/*
 
@@ -41,16 +43,13 @@ RUN rm -f \
         /lib/systemd/system/systemd-update-utmp* \
     2>/dev/null; true
 
-# Use a minimal PAM password stack without a complexity checker so that
-# test passwords can be kept simple and deterministic.
-RUN printf 'password\trequired\tpam_unix.so\n' > /etc/pam.d/common-password
-
 # Create the integration-test user before systemd starts the service so the
 # service's filesystem view includes the account database entry.
-RUN useradd -m webtest && echo 'webtest:OldPass1234' | chpasswd
+RUN useradd -m webtest && echo 'webtest:OldPass1234!' | chpasswd
 
 # Install the webpasswd binary.
 COPY --from=builder /webpasswd /usr/local/bin/webpasswd
+COPY pam.d/webpasswd /etc/pam.d/webpasswd
 
 # Populate the working directory required by the systemd unit.
 RUN mkdir -p /etc/webpasswd
