@@ -117,6 +117,7 @@ Then create an Apache HTTPS virtual host, for example
         AuthBasicProvider PAM
         AuthPAMService webpasswd
         Require valid-user
+        Header Set X-Remote-User %{REMOTE_USER}e
     </Location>
 
     ProxyPass / http://127.0.0.1:8080/
