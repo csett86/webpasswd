@@ -3,7 +3,7 @@ A simple web app to change your own local password, just like passwd on the cli
 
 > **⚠️ WARNING:** This is a rough draft, implemented heavily by @copilot and @codex
 
-![](IMG_6854.jpeg)
+![](screenshot.jpg)
 
 ## Features
 
