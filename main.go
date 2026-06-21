@@ -6,7 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"html/template"
-	"io/fs"
 	"log"
 	"net"
 	"net/http"
@@ -15,7 +14,7 @@ import (
 	"time"
 )
 
-//go:embed templates/index.html static/*
+//go:embed templates/index.html
 var embeddedFiles embed.FS
 
 // templateData is the data passed to the HTML template on each render.
@@ -41,15 +40,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to parse template: %v", err)
 	}
-	staticFS, err := fs.Sub(embeddedFiles, "static")
-	if err != nil {
-		log.Fatalf("failed to load static files: %v", err)
-	}
 
 	rl := NewRateLimiter(*rateLimit, *rateWindow)
 
 	mux := http.NewServeMux()
-	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
 	mux.HandleFunc("/", makeHandler(rl, *trustXFF))
 
 	srv := &http.Server{
@@ -70,7 +64,7 @@ func main() {
 // securityHeaders wraps a handler and sets conservative security headers.
 func securityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Security-Policy", "default-src 'self'; style-src 'self'")
+		w.Header().Set("Content-Security-Policy", "default-src 'self'; style-src 'self' 'unsafe-inline'")
 		w.Header().Set("X-Frame-Options", "DENY")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("Referrer-Policy", "same-origin")

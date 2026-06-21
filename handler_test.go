@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"html/template"
-	"io/fs"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -97,24 +96,6 @@ func TestHandler_MissingUsernamePrefillsRemoteUser(t *testing.T) {
 	}
 	if !strings.Contains(bodyText, `value="alice"`) {
 		t.Fatalf("expected remote user to prefill username, body: %s", bodyText)
-	}
-}
-
-func TestEmbeddedStaticFiles(t *testing.T) {
-	staticFS, err := fs.Sub(embeddedFiles, "static")
-	if err != nil {
-		t.Fatalf("failed to load embedded static files: %v", err)
-	}
-
-	req := httptest.NewRequest(http.MethodGet, "/style.css", nil)
-	rr := httptest.NewRecorder()
-	http.FileServer(http.FS(staticFS)).ServeHTTP(rr, req)
-
-	if rr.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", rr.Code)
-	}
-	if !strings.Contains(rr.Body.String(), "box-sizing") {
-		t.Fatal("expected embedded stylesheet content")
 	}
 }
 

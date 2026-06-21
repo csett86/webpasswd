@@ -18,13 +18,7 @@ Group=root
 # Path to the binary.
 ExecStart=/usr/local/bin/webpasswd \
     -addr :8080 \
-    -rate-limit 5 \
-    -rate-window 15m \
     -x-forwarded-for true
-
-# Working directory must contain templates/ and static/ subdirectories
-# (or adjust the binary to accept explicit paths).
-WorkingDirectory=/etc/webpasswd
 
 Restart=on-failure
 RestartSec=5

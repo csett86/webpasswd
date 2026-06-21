@@ -51,11 +51,6 @@ RUN useradd -m webtest && echo 'webtest:OldPass1234!' | chpasswd
 COPY --from=builder /webpasswd /usr/local/bin/webpasswd
 COPY pam.d/webpasswd /etc/pam.d/webpasswd
 
-# Populate the working directory required by the systemd unit.
-RUN mkdir -p /etc/webpasswd
-COPY templates/ /etc/webpasswd/templates/
-COPY static/    /etc/webpasswd/static/
-
 # Install and enable the systemd unit exactly as shipped in the repository.
 COPY webpasswd.service /etc/systemd/system/webpasswd.service
 RUN mkdir -p /etc/systemd/system/multi-user.target.wants \
