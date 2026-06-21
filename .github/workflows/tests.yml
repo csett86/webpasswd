@@ -39,5 +39,11 @@ jobs:
           go-version-file: go.mod
       - run: sudo apt update && sudo apt install -y libpam0g-dev
       - run: go build -o webpasswd .
+        env:
+          CGO_CFLAGS: -D_GNU_SOURCE
+      - uses: actions/upload-artifact@v6
+        with:
+          name: webpasswd-${{ matrix.os }}
+          path: webpasswd
       
       
