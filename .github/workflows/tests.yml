@@ -23,3 +23,21 @@ jobs:
         run: sudo apt update && sudo apt install -y libpam0g-dev
 
       - run: go test -count=1 ./...
+
+
+  build:
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - run: sudo apt update && sudo apt install -y libpam0g-dev
+      - run: go build -o webpasswd .
+      
+      
