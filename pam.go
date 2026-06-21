@@ -40,6 +40,8 @@ func ChangePassword(username, currentPassword, newPassword string) error {
 		return fmt.Errorf("%w: %w", ErrPAMUnknown, err)
 	}
 
+	defer authTx.End()
+
 	// Authenticate with the current password.
 	if err := authTx.Authenticate(0); err != nil {
 		return classifyPAMError(err, ErrAuthFailed)
@@ -62,6 +64,8 @@ func ChangePassword(username, currentPassword, newPassword string) error {
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrPAMUnknown, err)
 	}
+
+	defer changeTx.End()
 
 	// Request the password change.
 	if err := changeTx.ChangeAuthTok(0); err != nil {
