@@ -128,11 +128,6 @@ func handlePost(w http.ResponseWriter, r *http.Request, rl *RateLimiter, trustXF
 		renderForm(w, data)
 		return
 	}
-	if len(newPassword) < 8 {
-		data.Message = "New password must be at least 8 characters long."
-		renderForm(w, data)
-		return
-	}
 
 	// Attempt the PAM password change.
 	err := changePasswordFunc(username, currentPassword, newPassword)
