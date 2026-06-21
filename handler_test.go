@@ -60,6 +60,46 @@ func TestHandler_GET(t *testing.T) {
 	}
 }
 
+func TestHandler_GETPrefillsRemoteUser(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.RemoteAddr = "192.0.2.1:1234"
+	req.Header.Set("X-Remote-User", " alice ")
+	rr := httptest.NewRecorder()
+	rl := NewRateLimiter(5, 15*time.Minute)
+	makeHandler(rl, false)(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rr.Code)
+	}
+	if !strings.Contains(rr.Body.String(), `value="alice"`) {
+		t.Fatalf("expected remote user to prefill username, body: %s", rr.Body.String())
+	}
+}
+
+func TestHandler_MissingUsernamePrefillsRemoteUser(t *testing.T) {
+	rl := NewRateLimiter(5, 15*time.Minute)
+	v := goodForm()
+	v.Set("username", "")
+	body := v.Encode()
+	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("X-Remote-User", "alice")
+	req.RemoteAddr = "192.0.2.1:1234"
+	rr := httptest.NewRecorder()
+	makeHandler(rl, false)(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rr.Code)
+	}
+	bodyText := rr.Body.String()
+	if !strings.Contains(bodyText, "All fields are required") {
+		t.Fatalf("expected missing-field message, body: %s", bodyText)
+	}
+	if !strings.Contains(bodyText, `value="alice"`) {
+		t.Fatalf("expected remote user to prefill username, body: %s", bodyText)
+	}
+}
+
 func TestEmbeddedStaticFiles(t *testing.T) {
 	staticFS, err := fs.Sub(embeddedFiles, "static")
 	if err != nil {

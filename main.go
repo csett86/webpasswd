@@ -88,7 +88,7 @@ func makeHandler(rl *RateLimiter, trustXFF bool) http.HandlerFunc {
 
 		switch r.Method {
 		case http.MethodGet:
-			renderForm(w, templateData{})
+			renderForm(w, templateData{Username: remoteUser(r)})
 		case http.MethodPost:
 			handlePost(w, r, rl, trustXFF)
 		default:
@@ -107,7 +107,8 @@ func handlePost(w http.ResponseWriter, r *http.Request, rl *RateLimiter, trustXF
 		w.Header().Set("Retry-After", fmt.Sprintf("%.0f", retryAfter.Seconds()))
 		w.WriteHeader(http.StatusTooManyRequests)
 		renderForm(w, templateData{
-			Message: fmt.Sprintf("Too many attempts. Please try again in %s.", retryAfter.Round(time.Second)),
+			Message:  fmt.Sprintf("Too many attempts. Please try again in %s.", retryAfter.Round(time.Second)),
+			Username: remoteUser(r),
 		})
 		log.Printf("rate-limited ip=%s", ip)
 		return
@@ -125,6 +126,9 @@ func handlePost(w http.ResponseWriter, r *http.Request, rl *RateLimiter, trustXF
 
 	// Preserve username for re-render.
 	data := templateData{Username: username}
+	if data.Username == "" {
+		data.Username = remoteUser(r)
+	}
 
 	// Validate inputs.
 	if username == "" || currentPassword == "" || newPassword == "" || newPasswordConfirm == "" {
@@ -178,6 +182,11 @@ func renderForm(w http.ResponseWriter, data templateData) {
 // pre-template errors.
 func renderError(w http.ResponseWriter, msg string) {
 	http.Error(w, msg, http.StatusBadRequest)
+}
+
+// remoteUser returns the username provided by a trusted reverse proxy.
+func remoteUser(r *http.Request) string {
+	return strings.TrimSpace(r.Header.Get("X-Remote-User"))
 }
 
 // clientIP extracts the real client IP from the request. When trustXFF is

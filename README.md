@@ -62,12 +62,12 @@ uses the real client IP.
 ### Apache
 
 The Apache setup requires `mod_proxy`, `mod_proxy_http`, `mod_ssl`,
-`mod_auth_basic`, and `mod_authnz_pam`. Apache's HTTP proxy module adds
+`mod_headers`, `mod_auth_basic`, and `mod_authnz_pam`. Apache's HTTP proxy module adds
 `X-Forwarded-For` automatically:
 
 ```sh
 sudo apt install libapache2-mod-authnz-pam
-sudo a2enmod proxy proxy_http ssl
+sudo a2enmod proxy proxy_http ssl headers
 sudo a2enmod auth_basic authnz_pam
 ```
 
@@ -117,6 +117,7 @@ Then create an Apache HTTPS virtual host, for example
         AuthBasicProvider PAM
         AuthPAMService webpasswd
         Require valid-user
+        RequestHeader set X-Remote-User "%{REMOTE_USER}e"
     </Location>
 
     ProxyPass / http://127.0.0.1:8080/
