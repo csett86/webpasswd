@@ -51,10 +51,10 @@ func ChangePassword(username, currentPassword, newPassword string) error {
 		switch s {
 		case pam.PromptEchoOff, pam.PromptEchoOn:
 			lowerMsg := strings.ToLower(msg)
-			if strings.Contains(lowerMsg, "current") || strings.Contains(lowerMsg, "old") {
-				return currentPassword, nil
+			if strings.Contains(lowerMsg, "new") {
+				return newPassword, nil
 			}
-			return newPassword, nil
+			return currentPassword, nil
 		case pam.ErrorMsg, pam.TextInfo:
 			return "", nil
 		default:
