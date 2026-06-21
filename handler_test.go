@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"html/template"
+	"io/fs"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -14,7 +15,7 @@ import (
 func init() {
 	// Load the template for handler tests.
 	var err error
-	indexTmpl, err = template.ParseFiles("templates/index.html")
+	indexTmpl, err = template.ParseFS(embeddedFiles, "templates/index.html")
 	if err != nil {
 		panic("failed to parse template: " + err.Error())
 	}
@@ -56,6 +57,24 @@ func TestHandler_GET(t *testing.T) {
 	}
 	if !strings.Contains(rr.Body.String(), "<form") {
 		t.Fatal("expected form in response body")
+	}
+}
+
+func TestEmbeddedStaticFiles(t *testing.T) {
+	staticFS, err := fs.Sub(embeddedFiles, "static")
+	if err != nil {
+		t.Fatalf("failed to load embedded static files: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/style.css", nil)
+	rr := httptest.NewRecorder()
+	http.FileServer(http.FS(staticFS)).ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rr.Code)
+	}
+	if !strings.Contains(rr.Body.String(), "box-sizing") {
+		t.Fatal("expected embedded stylesheet content")
 	}
 }
 

@@ -9,7 +9,7 @@ A simple web app to change your own local password, just like passwd on the cli
 - Authentication and password change enforced by PAM (`/etc/pam.d/passwd`)
 - Per-IP rate limiting (configurable, default: 5 attempts / 15 minutes)
 - No JavaScript — pure HTML + CSS
-- Single static Go binary (CGO required for libpam)
+- Single Go binary with embedded templates and static files (CGO required for libpam)
 - Security headers: CSP, X-Frame-Options, X-Content-Type-Options
 
 ## Requirements
@@ -44,12 +44,10 @@ sudo ./webpasswd -addr :8080
 
 ## systemd
 
-Install the unit file and web assets:
+Install the binary and unit file:
 
 ```sh
 sudo cp webpasswd /usr/local/bin/
-sudo mkdir -p /etc/webpasswd
-sudo cp -r templates static /etc/webpasswd/
 sudo cp webpasswd.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now webpasswd
