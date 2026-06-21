@@ -55,17 +55,63 @@ sudo systemctl enable --now webpasswd
 
 ## Reverse proxy
 
-webpasswd does **not** terminate TLS. Put it behind nginx, Caddy, or a similar
+webpasswd does **not** terminate TLS. Put it behind nginx, apache, or a similar
 reverse proxy that handles HTTPS. Enable `-x-forwarded-for` so rate limiting
-uses the real client IP:
+uses the real client IP
 
+
+### Apache
+
+The Apache setup requires `mod_proxy`, `mod_proxy_http`, and
+`mod_ssl`. Apache's HTTP proxy module adds `X-Forwarded-For` automatically:
+
+```sh
+sudo a2enmod proxy proxy_http ssl
+sudo systemctl reload apache2
 ```
-# nginx example
-location / {
-    proxy_pass http://127.0.0.1:8080;
-    proxy_set_header X-Real-IP $remote_addr;
-}
+
+Run webpasswd on a local-only address and trust the proxy headers. If you use
+the provided systemd unit, change `ExecStart` to listen on `127.0.0.1:8080`:
+
+```ini
+ExecStart=/usr/local/bin/webpasswd \
+    -addr 127.0.0.1:8080 \
+    -x-forwarded-for true
 ```
+
+Then create an Apache HTTPS virtual host, for example
+`/etc/apache2/sites-available/webpasswd.conf`:
+
+```apache
+<VirtualHost *:443>
+    ServerName passwd.example.com
+
+    SSLEngine on
+    SSLCertificateFile /etc/letsencrypt/live/passwd.example.com/fullchain.pem
+    SSLCertificateKeyFile /etc/letsencrypt/live/passwd.example.com/privkey.pem
+
+    ProxyPass / http://127.0.0.1:8080/
+    ProxyPassReverse / http://127.0.0.1:8080/
+</VirtualHost>
+
+<VirtualHost *:80>
+    ServerName passwd.example.com
+    Redirect permanent / https://passwd.example.com/
+</VirtualHost>
+```
+
+Enable the site and reload Apache:
+
+```sh
+sudo a2ensite webpasswd
+sudo apache2ctl configtest
+sudo systemctl reload apache2
+sudo systemctl restart webpasswd
+```
+
+webpasswd currently expects to be served at `/`; do not place it under a
+subpath such as `/passwd/` unless you also adjust the application routes and
+static asset paths.
 
 ## Security notes
 
