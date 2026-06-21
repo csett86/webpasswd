@@ -1,10 +1,12 @@
 package main
 
 import (
+	"embed"
 	"errors"
 	"flag"
 	"fmt"
 	"html/template"
+	"io/fs"
 	"log"
 	"net"
 	"net/http"
@@ -12,6 +14,9 @@ import (
 	"strings"
 	"time"
 )
+
+//go:embed templates/index.html static/*
+var embeddedFiles embed.FS
 
 // templateData is the data passed to the HTML template on each render.
 type templateData struct {
@@ -32,15 +37,19 @@ func main() {
 
 	// Parse the embedded template at startup so we catch errors early.
 	var err error
-	indexTmpl, err = template.ParseFiles("templates/index.html")
+	indexTmpl, err = template.ParseFS(embeddedFiles, "templates/index.html")
 	if err != nil {
 		log.Fatalf("failed to parse template: %v", err)
+	}
+	staticFS, err := fs.Sub(embeddedFiles, "static")
+	if err != nil {
+		log.Fatalf("failed to load static files: %v", err)
 	}
 
 	rl := NewRateLimiter(*rateLimit, *rateWindow)
 
 	mux := http.NewServeMux()
-	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
 	mux.HandleFunc("/", makeHandler(rl, *trustXFF))
 
 	srv := &http.Server{
