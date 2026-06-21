@@ -55,19 +55,40 @@ sudo systemctl enable --now webpasswd
 
 ## Reverse proxy
 
-webpasswd does **not** terminate TLS. Put it behind nginx, apache, or a similar
+webpasswd does **not** terminate TLS. Put it behind nginx, Apache, or a similar
 reverse proxy that handles HTTPS. Enable `-x-forwarded-for` so rate limiting
-uses the real client IP
-
+uses the real client IP.
 
 ### Apache
 
-The Apache setup requires `mod_proxy`, `mod_proxy_http`, and
-`mod_ssl`. Apache's HTTP proxy module adds `X-Forwarded-For` automatically:
+The Apache setup requires `mod_proxy`, `mod_proxy_http`, `mod_ssl`,
+`mod_auth_basic`, and `mod_authnz_pam`. Apache's HTTP proxy module adds
+`X-Forwarded-For` automatically:
 
 ```sh
+sudo apt install libapache2-mod-authnz-pam
 sudo a2enmod proxy proxy_http ssl
-sudo systemctl reload apache2
+sudo a2enmod auth_basic authnz_pam
+```
+
+When using `pam_unix.so` for Basic Auth against local Unix accounts, Apache's
+runtime user must be able to read local shadow password data. On Debian/Ubuntu
+that user is normally `www-data`:
+
+```sh
+sudo usermod -aG shadow www-data
+sudo systemctl restart apache2
+```
+
+Restarting Apache is required so its worker processes pick up the new group
+membership. Without this step, Basic Auth can keep returning `401 Unauthorized`
+even when the user entered the correct password.
+
+Create a PAM service for Apache to use, for example `/etc/pam.d/webpasswd`:
+
+```pam
+auth required pam_unix.so
+account required pam_unix.so
 ```
 
 Run webpasswd on a local-only address and trust the proxy headers. If you use
@@ -90,6 +111,14 @@ Then create an Apache HTTPS virtual host, for example
     SSLCertificateFile /etc/letsencrypt/live/passwd.example.com/fullchain.pem
     SSLCertificateKeyFile /etc/letsencrypt/live/passwd.example.com/privkey.pem
 
+    <Location />
+        AuthType Basic
+        AuthName "webpasswd"
+        AuthBasicProvider PAM
+        AuthPAMService webpasswd
+        Require valid-user
+    </Location>
+
     ProxyPass / http://127.0.0.1:8080/
     ProxyPassReverse / http://127.0.0.1:8080/
 </VirtualHost>
@@ -108,6 +137,14 @@ sudo apache2ctl configtest
 sudo systemctl reload apache2
 sudo systemctl restart webpasswd
 ```
+
+Apache Basic Auth is only an outer access check. webpasswd still asks for the
+current password and performs its own PAM password-change operation.
+
+Adding `www-data` to the `shadow` group gives Apache enough access to verify
+local Unix passwords. If you do not want Apache to have that access, do not use
+Apache PAM Basic Auth with `pam_unix.so`; use only the app's own PAM
+authentication or an Apache authentication backend such as SSSD/LDAP instead.
 
 webpasswd currently expects to be served at `/`; do not place it under a
 subpath such as `/passwd/` unless you also adjust the application routes and
